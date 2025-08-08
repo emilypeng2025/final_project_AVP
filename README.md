@@ -59,7 +59,7 @@ nn.Sequential(
 
 ### 2. Trajectory Planner
 
-* Use Bezier curves or Hybrid A\* to generate a smooth parking path
+* Use Bezier curves (or Hybrid A\*) to generate a smooth parking path
 * Optionally use learned planning (e.g., imitation learning)
 
 ### 3. Controller
