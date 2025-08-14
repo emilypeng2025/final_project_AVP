@@ -1,1 +1,26 @@
 venv
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_meta
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models / Large artifacts (optional keep)
+# models/*.pt
+# models/*.pkl
+
+# Generated media
+artifacts/
+venv/
+.env/
+.env*/
