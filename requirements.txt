@@ -3,3 +3,5 @@ matplotlib
 numpy
 scikit-learn
 torch
+scikit-learn==1.6.1
+joblib

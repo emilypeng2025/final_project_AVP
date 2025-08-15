@@ -1,63 +1,69 @@
-import torch
-import numpy as np
-import joblib
+# utils/strategy_predictor.py
 
-# Define the model structure (same as in training)
-model = torch.nn.Sequential(
-    torch.nn.Linear(5, 32),
-    torch.nn.ReLU(),
-    torch.nn.Linear(32, 16),
-    torch.nn.ReLU(),
-    torch.nn.Linear(16, 3)
+import os
+import numpy as np
+import torch
+import torch.nn as nn
+import warnings
+from sklearn.exceptions import InconsistentVersionWarning
+warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+
+# ---------- Model definition (MUST match training) ----------
+# If you trained with this exact architecture, keep it.
+# If you trained a custom MLP class, replace this with that class definition.
+model = nn.Sequential(
+    nn.Linear(5, 32),
+    nn.ReLU(),
+    nn.Linear(32, 16),
+    nn.ReLU(),
+    nn.Linear(16, 3)
 )
 
-# Load trained weights
-model.load_state_dict(torch.load('mlp_strategy.pt'))
-model.eval()
+# ---------- Resolve paths relative to this file ----------
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))   # -> .../self_parking_ai
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+MODEL_PATH = os.path.join(MODEL_DIR, "mlp_strategy.pt")
+SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
 
-# Try loading the scaler
+
+# ---------- Load weights (CPU-safe) ----------
 try:
-    scaler = joblib.load('scaler.pkl')
-except FileNotFoundError:
+    state = torch.load(MODEL_PATH, map_location="cpu")
+    model.load_state_dict(state)
+    model.eval()
+except FileNotFoundError as e:
+    raise FileNotFoundError(
+        f"Could not find model weights at {MODEL_PATH}. "
+        "Ensure mlp_strategy.pt is in self_parking_ai/models/."
+    ) from e
+
+# ---------- Optional: load scaler ----------
+try:
+    import joblib
+    scaler = joblib.load(SCALER_PATH)
+except Exception:
     scaler = None
-    print("⚠️ No scaler found — using raw inputs")
+    print("⚠️  No scaler loaded; continuing without feature scaling.")
 
-# Clean, reusable prediction function
-def predict_strategy(car_length, car_width, spot_length, spot_width, distance, verbose=False):
+# ---------- Inference helper ----------
+def predict_strategy(car_L, car_W, spot_L, spot_W, dist, verbose: bool = False):
     """
-    Predict parking strategy based on car and spot dimensions.
-
-    Inputs:
-        - car_length, car_width, spot_length, spot_width, distance: float
-        - verbose: bool (print confidence scores)
-
+    Inputs: floats (meters)
     Returns:
-        - recommendation (str): best strategy label
-        - confidence (float): probability score of top strategy
-        - all_probs (dict): confidence for all strategy classes
+      strategy: str
+      confidence: float in [0,1]
+      scores: dict[str -> float] of class probabilities
     """
-
-    sample_input = np.array([[car_length, car_width, spot_length, spot_width, distance]])
-
-    if scaler:
-        sample_input = scaler.transform(sample_input)
-
-    input_tensor = torch.tensor(sample_input, dtype=torch.float32)
+    x = np.array([[car_L, car_W, spot_L, spot_W, dist]], dtype=float)
+    if scaler is not None:
+        x = scaler.transform(x)
 
     with torch.no_grad():
-        output = model(input_tensor)
-        probabilities = torch.softmax(output, dim=1).numpy()[0]
-        predicted_class = torch.argmax(output, dim=1).item()
+        logits = model(torch.tensor(x, dtype=torch.float32))
+        probs = torch.softmax(logits, dim=1).numpy()[0]
 
-    strategy_labels = ['Reverse Parallel', 'Forward Perpendicular', 'Cannot Park']
-    recommendation = strategy_labels[predicted_class]
-    confidence = probabilities[predicted_class]
-    all_probs = {label: float(f"{prob:.4f}") for label, prob in zip(strategy_labels, probabilities)}
-
+    classes = ["Forward Perpendicular", "Reverse Parallel", "Cannot Park"]
+    idx = int(probs.argmax())
     if verbose:
-        print("📊 Strategy Confidence Scores:")
-        for label, prob in all_probs.items():
-            print(f"{label}: {prob*100:.2f}%")
-        print(f"\n🚘 Recommended Strategy: {recommendation} ({confidence:.2%} confidence)")
-
-    return recommendation, confidence, all_probs
+        print("probs:", dict(zip(classes, map(float, probs))))
+    return classes[idx], float(probs[idx]), dict(zip(classes, map(float, probs)))

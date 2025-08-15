@@ -98,6 +98,17 @@ make PythonAPI
 
 ## 🚀 How to Run
 
+
+## Quickstart
+
+```bash
+# from final_project_AVP/self_parking_ai
+python -m venv ../venv
+source ../venv/bin/activate  # Windows: ..\venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
+
+
 ### 1. Train the MLP model
 
 ```bash
