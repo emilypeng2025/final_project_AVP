@@ -5,3 +5,5 @@ scikit-learn
 torch
 scikit-learn==1.6.1
 joblib
+openai
+python-dotenv    # optional; handy for local .env

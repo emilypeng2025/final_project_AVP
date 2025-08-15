@@ -5,8 +5,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 import warnings
+try:
+    # scikit-learn may warn if the saved scaler was from a different minor version
+    from sklearn.exceptions import InconsistentVersionWarning
+    warnings.simplefilter("ignore", InconsistentVersionWarning)
+except Exception:
+    pass
+
 from sklearn.exceptions import InconsistentVersionWarning
 warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn")
 
 # ---------- Model definition (MUST match training) ----------
 # If you trained with this exact architecture, keep it.
