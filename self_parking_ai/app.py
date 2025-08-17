@@ -133,6 +133,25 @@ if run_button:
 
     st.pyplot(fig)
 
+    # ------- Export control points (x, y, heading_deg) -------
+    import io
+    def path_headings(path_xy: np.ndarray) -> np.ndarray:
+        d = np.diff(path_xy, axis=0, prepend=path_xy[:1])
+        return np.degrees(np.arctan2(d[:,1], d[:,0]))
+
+    cp = np.column_stack([curve_points, path_headings(curve_points)])
+    # Save to artifacts and offer download
+    os.makedirs(os.path.join(os.path.dirname(__file__), "artifacts"), exist_ok=True)
+    out_csv = os.path.join(os.path.dirname(__file__), "artifacts", "control_points_forward.csv")
+    np.savetxt(out_csv, cp, delimiter=",", header="x,y,heading_deg", comments="")
+
+    buf = io.StringIO()
+    np.savetxt(buf, cp, delimiter=",", header="x,y,heading_deg", comments="")
+    st.download_button("⬇️ Download control points CSV",
+                       buf.getvalue(),
+                       file_name="control_points_forward.csv",
+                       mime="text/csv")
+
     # ---------- Summary ----------
     st.subheader("Plan Summary")
     st.write(f"- Strategy suggested: **{display_strategy}** (MLP: **{mlp_strategy}**, conf **{confidence:.1%}**)")
