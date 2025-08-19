@@ -1,0 +1,99 @@
+How to Make It Work Locally (Streamlit + AVP Simulator)
+
+1) Purpose of this document
+
+This file serves two purposes:
+1. Presentation guide – show how to create and run the Streamlit app during the final‑project demo.
+2. Feature tour – explain what’s on the Streamlit interface using the provided screenshots and the terminology below.
+
+
+2) Run Streamlit locally (recommended path)
+
+Prerequisites
+	• Python 3.10+
+	• Git (optional)
+
+Steps (macOS / Linux)
+# 1) Clone or open project folder named "final_project_AVP"
+cd final_project_AVP
+
+# 2) (Recommended) Create & activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3) Install requirements for Streamlit at terminal:
+pip install -r requirements_streamlit.txt
+
+# 4) Run the Streamlit app 
+streamlit run app.py
+
+Steps (Windows PowerShell): skipped here
+
+The browser will open automatically. If it doesn’t, copy the local URL from the terminal (e.g., http://localhost:8501) into your browser.
+
+🔧 Common fixes
+• “Invalid value: File does not exist: app.py”: make sure you are in the same folder where app.py lives (e.g., final_project_AVP/) before running the command.
+• “Port already in use”: run streamlit run app.py --server.port 8502.
+
+
+
+Explanation of this folder "streamlit_screenshots_for_final_presentation":
+Under folder artifacts/streamlit_screenshots_for_final_presentation, there are Streamlit screenshots 1–5. 
+
+Screenshot 1 — Landing view
+	•	What the page looks like right after launch from the terminal.
+	•	Top: title and description.
+	•	Left sidebar: input controls (spot size, car size preset, distance to spot, etc.).
+	•	Main panel: plotted parking bay (green rectangle) and the planned path.
+
+Screenshot 2 — Forward parking path
+	•	From the left sidebar inputs at the bottom, the app generates a forward parking trajectory made of:
+		1. pathA – first Bézier curve (initial steering).
+		2. pathS – a short straight segment (forward drive).
+		3. pathB – second Bézier curve (final alignment).
+	•	The green rectangle is the parking bay, sized by sidebar parameters.
+	•	Car size is given as a percentage of the bay (so the path is feasible and avoids scraping).
+	•	Inset keeps a safe gap from the bay line.
+	•	(Roadmap) Reverse strategy is more complex; current demo focuses on forward parking for clarity.
+	•	The car aligns by rear‑bumper to the bay and stops when inside.
+
+Key functions behind this (implemented in streamlit_sandbox.ipynb and copied into app.py as needed):
+	•	generate_path_for_strategy(...) – builds the path (Bezier S‑shape for reverse concept; straight + curves for forward).
+	•	generate_bezier_curve(nA, nS, nB) – quadratic Bézier using control points:
+	•	A = start (rear bumper)
+	•	S = steering control point
+	•	B = end (target inside the bay)
+
+Screenshots 3 & 4 — The exported path file (for Webots)
+	•	The app can export a CSV of planned states to path.csv.
+	•	Each row contains x, y, heading_deg (world coordinates).
+
+What are x, y, heading_deg?
+	•	x – position along the global X‑axis (meters)
+	•	y – position along the global Y‑axis (meters)
+	•	heading_deg – vehicle orientation in degrees, measured from the X‑axis
+
+Examples
+	•	(x=15, y=3, heading_deg=90) = 15 m right, 3 m up, facing “north” (perpendicular to the bay).
+	•	(x=0, y=0, heading_deg=0) = at origin, facing along +X.
+
+These are used to plot in Streamlit and to replay in Webots (pure‑pursuit/PID).
+
+Screenshot 5 — Sidebar controls (terminology)
+	•	Spot length/width: size of the parking bay (meters).
+	•	Car size preset: car length/width as a percentage of the bay (keeps path feasible).
+	•	Distance to spot: initial longitudinal gap before entering the bay.
+	•	Rear bumper inset: how far the rear bumper should end inside the bay line.
+	•	Wheelbase, max steer (if present): vehicle kinematics used for path curvature and controller tuning.
+
+⸻
+
+5) How Streamlit and Webots connect (CSV bridge)
+	•	When you click Export (or the app auto‑saves), Streamlit writes path.csv with x, y, heading_deg.
+	•	In Webots controller (e.g., avp_free.py), you configure:
+CSV_FILE = os.path.join(os.path.dirname(__file__), "path.csv")
+	•	Webots reads those waypoints and executes them with pure‑pursuit or PID.
+
+One last sentence from Emily: if you want to go through Ngrok, the notebook streamlit_sandbox.ipynb has the codes, I can show during presentation. The file Streamlit works on is app.py whose path is: final_project_AVP/self_parking_ai/app.py
+
+
